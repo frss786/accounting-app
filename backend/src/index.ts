@@ -3,6 +3,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 
 import ledgerRoutes from './routes/ledger';
 import categoryRoutes from './routes/category';
+import transactionRoutes from './routes/transaction';
 
 const app: Express = express();
 const port = process.env.PORT || 3001;
@@ -17,6 +18,9 @@ app.use('/api/ledgers', ledgerRoutes);
 // Category routes (nested under ledgers)
 // For example: /api/ledgers/123/categories
 app.use('/api/ledgers/:ledgerId/categories', categoryRoutes);
+
+// Transaction routes (nested under ledgers)
+app.use('/api/ledgers/:ledgerId/transactions', transactionRoutes);
 
 // Health check route
 app.get('/health', (req: Request, res: Response) => {
