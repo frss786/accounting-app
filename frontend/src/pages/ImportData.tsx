@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UploadCloud, FileSpreadsheet, Loader2, CheckCircle2, X } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 type StagedRecord = {
   date: string;
@@ -11,7 +12,9 @@ type StagedRecord = {
 };
 
 export default function ImportData() {
-  const [file, setFile] = useState<File | null>(null);
+  const { user } = useAuth();
+  const ledgerId = user?.ledgerId ?? 'default-ledger';
+  const [, setFile] = useState<File | null>(null);
   const [stagedData, setStagedData] = useState<StagedRecord[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export default function ImportData() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await axios.post('/api/ledgers/default-ledger/import/upload', formData, {
+      const response = await api.post(`/api/ledgers/${ledgerId}/import/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -54,7 +57,7 @@ export default function ImportData() {
     setLoading(true);
     setError(null);
     try {
-      await axios.post('/api/ledgers/default-ledger/import/commit', { data: stagedData });
+      await api.post(`/api/ledgers/${ledgerId}/import/commit`, { transactions: stagedData });
       setStagedData(null);
       setFile(null);
       alert('Data imported successfully!');

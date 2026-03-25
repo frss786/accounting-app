@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 // import cors from 'cors';
 
+import authRoutes from "./routes/auth.js";
 import ledgerRoutes from "./routes/ledger.js";
 import categoryRoutes from "./routes/category.js";
 import transactionRoutes from "./routes/transaction.js";
@@ -13,10 +14,11 @@ const port = process.env.PORT || 3001;
 // app.use(cors()); // Uncomment when you add cors package
 app.use(express.json());
 
+// Auth routes (public — no JWT required)
+app.use("/api/auth", authRoutes);
+
 // Main Routes
 app.use("/api/ledgers", ledgerRoutes);
-
-// Category routes (nested under ledgers)
 // For example: /api/ledgers/123/categories
 app.use("/api/ledgers/:ledgerId/categories", categoryRoutes);
 

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Transaction {
   id: string;
@@ -24,6 +25,8 @@ interface Category {
 }
 
 export default function LedgerFeed() {
+  const { user } = useAuth();
+  const ledgerId = user?.ledgerId ?? 'default-ledger';
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +36,8 @@ export default function LedgerFeed() {
     async function fetchData() {
       try {
         const [txRes, catRes] = await Promise.all([
-          axios.get('/api/ledgers/default-ledger/transactions'),
-          axios.get('/api/ledgers/default-ledger/categories').catch(() => ({ data: [] }))
+          api.get(`/api/ledgers/${ledgerId}/transactions`),
+          api.get(`/api/ledgers/${ledgerId}/categories`).catch(() => ({ data: [] }))
         ]);
         
         if (!isMounted) return;

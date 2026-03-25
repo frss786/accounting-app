@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Category {
   id: string;
@@ -9,6 +10,8 @@ interface Category {
 }
 
 export default function ManualEntry() {
+  const { user } = useAuth();
+  const ledgerId = user?.ledgerId ?? 'default-ledger';
   const [formData, setFormData] = useState({
     type: 'Expense',
     amount: '',
@@ -22,7 +25,7 @@ export default function ManualEntry() {
 
   useEffect(() => {
     // Fetch real categories from backend on mount
-    axios.get('/api/ledgers/default-ledger/categories')
+    api.get(`/api/ledgers/${ledgerId}/categories`)
       .then(res => setCategories(res.data))
       .catch(err => console.error('Failed to load categories', err));
   }, []);
@@ -49,7 +52,7 @@ export default function ManualEntry() {
         notes: formData.notes
       };
 
-      await axios.post('/api/ledgers/default-ledger/transactions', payload);
+      await api.post(`/api/ledgers/${ledgerId}/transactions`, payload);
       alert('Transaction saved successfully!');
       
       // Reset form (keep type and date)

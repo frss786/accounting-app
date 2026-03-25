@@ -18,14 +18,13 @@ datasource db {
 
 // User model
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  role      String   @default("MEMBER")
-  createdAt DateTime @default(now()) 
-  updatedAt DateTime @updatedAt 
-
-  // Relations
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("MEMBER")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   ledgers      LedgerMember[]
   transactions Transaction[]
   accounts     Account[]

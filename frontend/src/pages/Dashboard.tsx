@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, CartesianGrid, Legend
 } from 'recharts';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Transaction {
   id: string;
@@ -39,6 +41,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const ledgerId = user?.ledgerId ?? 'default-ledger';
   const [timeRange, setTimeRange] = useState('1 Month');
   const [loading, setLoading] = useState(true);
   const [monthlyTrendData, setMonthlyTrendData] = useState<{name: string, income: number, expense: number}[]>([]);
@@ -52,15 +56,15 @@ export default function Dashboard() {
       try {
         setLoading(true);
         const [txRes, catRes] = await Promise.all([
-          fetch('/api/ledgers/default-ledger/transactions'),
-          fetch('/api/ledgers/default-ledger/categories')
+          api.get(`/api/ledgers/${ledgerId}/transactions`),
+          api.get(`/api/ledgers/${ledgerId}/categories`)
         ]);
         
         let txs: Transaction[] = [];
         let cats: Category[] = [];
 
-        if (txRes.ok) txs = await txRes.json();
-        if (catRes.ok) cats = await catRes.json();
+        txs = txRes.data || [];
+        cats = catRes.data || [];
 
         // Map categories by id for quick lookup
         const catsById: Record<string, string> = {};
@@ -80,6 +84,10 @@ export default function Dashboard() {
           const d = new Date(tx.timestamp);
           if (isNaN(d.getTime())) return;
 
+          // Prisma Decimal comes over the wire as a string — coerce to number
+          const amount = Number(tx.amount);
+          if (isNaN(amount)) return;
+
           const monthName = d.toLocaleString('default', { month: 'short' });
           const year = d.getFullYear(); // to make key unique per year-month
           const monthKey = `${monthName} ${year}`;
@@ -91,15 +99,15 @@ export default function Dashboard() {
           const monthData = monthlyMap.get(monthKey)!;
 
           if (tx.type === 'INCOME') {
-            monthData.income += tx.amount;
-            totalIncome += tx.amount;
+            monthData.income += amount;
+            totalIncome += amount;
           } else if (tx.type === 'EXPENSE') {
-            monthData.expense += tx.amount;
-            totalExpense += tx.amount;
+            monthData.expense += amount;
+            totalExpense += amount;
             
             // Category aggregation
-            let cName = tx.categoryId && catsById[tx.categoryId] ? catsById[tx.categoryId] : 'Uncategorized';
-            catMap.set(cName, (catMap.get(cName) || 0) + tx.amount);
+            const cName = tx.categoryId && catsById[tx.categoryId] ? catsById[tx.categoryId] : 'Uncategorized';
+            catMap.set(cName, (catMap.get(cName) || 0) + amount);
           }
         });
 
@@ -252,7 +260,7 @@ export default function Dashboard() {
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {categoryData.map((entry, index) => (
+                  {categoryData.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

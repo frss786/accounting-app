@@ -73,7 +73,7 @@ router.get('/', verifyLedgerAccess, async (req: Request, res: Response) => {
 router.post('/', verifyLedgerAccess, async (req: Request, res: Response) => {
   try {
     const { ledgerId } = req.params;
-    const { amount, type, category_id, account_id } = req.body;
+    const { amount, type, category_id, account_id, notes, timestamp } = req.body;
 
     if (amount === undefined || !type || !category_id || !account_id) {
       res.status(400).json({ error: 'Missing required fields: amount, type, category_id, account_id' });
@@ -101,6 +101,8 @@ router.post('/', verifyLedgerAccess, async (req: Request, res: Response) => {
         accountId: account_id,
         userId: userId,
         ledgerId,
+        notes: notes || null,
+        timestamp: timestamp ? new Date(timestamp) : new Date(),
       },
     });
 

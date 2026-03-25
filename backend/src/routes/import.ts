@@ -9,7 +9,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Temporarily mock user ID since we don't have full auth setup yet based on the context
 // In a real app, this comes from req.user
-const MOCK_USER_ID = "user-1";
+const MOCK_USER_ID = "dev-user-id";
+const DEFAULT_ACCOUNT_ID = "default-account"; // ensure imported tx have an account if they don't specify one
 
 // POST /upload - Parse CSV and return preview JSON array
 router.post(
@@ -54,10 +55,8 @@ router.post("/commit", async (req: Request, res: Response): Promise<void> => {
       userId: MOCK_USER_ID, // Use mock or actual user from auth context
       amount: parseFloat(tx.amount),
       type: tx.type, // 'INCOME' | 'EXPENSE' | 'TRANSFER'
-      categoryId: tx.categoryId,
-      accountId: tx.accountId,
-      notes: tx.notes || null,
-      timestamp: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+      categoryId: tx.categoryId || null, // Will probably fail constraint if empty, need a default category?
+      accountId: tx.accountId || DEFAULT_ACCOUNT_ID,
       externalId: tx.externalId || null,
     }));
 
