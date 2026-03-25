@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../lib/prisma';
-import { requireAuth } from '../middleware/auth';
-import { TransactionType } from '@prisma/client';
+import { Router, type Request, type Response } from 'express';
+import { prisma } from '../lib/prisma.js';
+import { requireAuth } from '../middleware/auth.js';
+const TransactionType = { INCOME: "INCOME", EXPENSE: "EXPENSE", TRANSFER: "TRANSFER" };
 
 const router = Router({ mergeParams: true });
 
@@ -96,7 +96,7 @@ router.post('/', verifyLedgerAccess, async (req: Request, res: Response) => {
     const transaction = await prisma.transaction.create({
       data: {
         amount,
-        type: type as TransactionType,
+        type: type,
         categoryId: category_id,
         accountId: account_id,
         userId: userId,

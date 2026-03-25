@@ -1,10 +1,10 @@
-import express, { Express, Request, Response, NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 // import cors from 'cors';
 
-import ledgerRoutes from "./routes/ledger";
-import categoryRoutes from "./routes/category";
-import transactionRoutes from "./routes/transaction";
-import importRoutes from "./routes/import";
+import ledgerRoutes from "./routes/ledger.js";
+import categoryRoutes from "./routes/category.js";
+import transactionRoutes from "./routes/transaction.js";
+import importRoutes from "./routes/import.js";
 
 const app: Express = express();
 const port = process.env.PORT || 3001;

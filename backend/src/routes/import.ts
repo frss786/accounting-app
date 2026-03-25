@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import { parseCsv } from "../services/csvParser";
-import { prisma } from "../lib/prisma";
+import { parseCsv } from "../services/csvParser.js";
+import { prisma } from "../lib/prisma.js";
 
 // Use mergeParams so we can access :ledgerId
 const router = Router({ mergeParams: true });
