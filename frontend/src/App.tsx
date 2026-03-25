@@ -1,121 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { LayoutDashboard, FileText, UploadCloud } from 'lucide-react';
+
+import Dashboard from './pages/Dashboard';
+import LedgerFeed from './pages/LedgerFeed';
+import ImportData from './pages/ImportData';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <Router>
+      <div className="flex h-screen bg-gray-50">
+        {/* Sidebar */}
+        <div className="w-64 bg-white border-r border-gray-200 shadow-sm flex flex-col">
+          <div className="p-6">
+            <h2 className="text-xl font-bold text-gray-800">Family Ledger</h2>
+          </div>
+          <nav className="flex-1 mt-6 px-4 space-y-2">
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              <LayoutDashboard size={20} />
+              Dashboard
+            </NavLink>
+            <NavLink
+              to="/ledger"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              <FileText size={20} />
+              Ledger Feed
+            </NavLink>
+            <NavLink
+              to="/import"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              <UploadCloud size={20} />
+              Import Data
+            </NavLink>
+          </nav>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto">
+          <main className="p-8">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/ledger" element={<LedgerFeed />} />
+              <Route path="/import" element={<ImportData />} />
+            </Routes>
+          </main>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;
