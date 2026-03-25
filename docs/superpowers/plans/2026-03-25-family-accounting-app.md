@@ -45,16 +45,40 @@ Run: `cd backend && npm install prisma --save-dev && npx prisma init`
 Configure `.env` with a dummy connection string format (e.g., `DATABASE_URL="postgresql://user:password@localhost:5432/accounting?schema=public"`).
 
 - [ ] **Step 2: Define Prisma Schema (User, Ledger, Category, Account, Transaction)**
-Create the models inside `schema.prisma` mapping directly to the Design Spec requirements (User with Roles, shared Ledger, Income/Expense Category, Accounts, Transaction with Decimal amounts, UTC Time, and external_id).
+Create the models inside `schema.prisma`. 
+Crucial constraints from spec: `external_id` MUST be `@unique` on Transaction. Store timestamps in UTC format. Users must have a role enum (`ADMIN` / `MEMBER`).
 
-- [ ] **Step 3: Optional Test validation for Prisma Types**
+- [ ] **Step 3: Database Migration**
+Run `npx prisma migrate dev --name init` to generate SQL and push to local postgres instance.
+
+- [ ] **Step 4: Optional Test validation for Prisma Types**
 Run: `cd backend && npx prisma format && npx prisma validate`
 Expected: Output showing schema is valid.
 
-- [ ] **Step 4: Commit Schema**
+- [ ] **Step 5: Commit Schema**
 ```bash
 git add backend/prisma backend/.env.example
 git commit -m "feat(db): define core prisma schema for accounting app"
+```
+
+---
+
+### Task 2.5: Authentication & Ledger Scoping Middleware
+
+**Files:**
+- Create: `backend/src/middleware/auth.ts`
+- Modify: `backend/package.json`
+
+- [ ] **Step 1: Install JWT Dependencies**
+Run: `cd backend && npm install jsonwebtoken bcrypt && npm install -D @types/jsonwebtoken @types/bcrypt`
+
+- [ ] **Step 2: Create JWT extraction middleware**
+Define `requireAuth` function that reads JWT from headers, verifies it, and attaches `req.user_id` and `req.ledger_id`.
+
+- [ ] **Step 3: Commit Auth Middleware**
+```bash
+git add backend/src/middleware/ backend/package.json
+git commit -m "feat(auth): jwt middleware and request scoping"
 ```
 
 ---
@@ -75,7 +99,7 @@ Create minimal express listener and basic error handler middleware.
 Create an API to pull Categories shared across the Ledger scope (`GET /api/ledgers/:id/categories`).
 
 - [ ] **Step 3: Implement Ledger/User basic linking logic**
-Placeholder APIs for Ledger data loading (assuming auth bypass for early MVP logic, resolving `user_id` as query string or bare headers manually).
+Placeholder APIs for Ledger data loading, strongly enforcing the `req.ledger_id` boundaries introduced in Task 2.5 to ensure data isolation.
 
 - [ ] **Step 4: Commit Core API**
 ```bash
@@ -160,7 +184,7 @@ git commit -m "feat(ui): base application layout and routing"
 - Create: `frontend/src/components/TransactionItem.tsx`
 
 - [ ] **Step 1: Fetch Transactions**
-Write an Axios call to `GET /api/transactions` and hold in state. Add Timezone/Date parsing using native `Intl` or `date-fns`.
+Write an Axios call to `GET /api/transactions` and hold in state. Add Timezone/Date parsing using native `Intl` or `date-fns`, explicitly defaulting grouping logics to `Asia/Shanghai` if not set.
 
 - [ ] **Step 2: Create Feed UI**
 Loop through transactions and display them gracefully marking differences between Income (Green) vs Expenses (Red) via Tailwind.
