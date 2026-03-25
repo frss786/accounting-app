@@ -9,6 +9,7 @@ A lightweight, family-collaborative accounting web application. The core objecti
 - **Manual Entry**: Quick entry for Income/Expense, selecting the amount, date, category, payer, and funding account.
 - **Alipay/WeChat CSV Import (Core)**: 
   - Users can upload CSV exports from their payment apps.
+  - **Upload & Charset Handling:** Backend MUST parse using GBK/UTF-8 detection since Alipay/WeChat CSVs are often GBK encoded, to prevent Chinese character corruption.
   - **Category Mapping Engine**: The backend will auto-map standard transaction descriptions (e.g., "Didi", "Subway") to standardized user categories (e.g., "Transportation").
   - **Preview & Confirmation**: A staging UI where users manually review unmapped or flagged transactions before officially committing them to the database.
 
@@ -29,11 +30,17 @@ A lightweight, family-collaborative accounting web application. The core objecti
 - **Database**: PostgreSQL handled via Prisma ORM for strong relational guarantees and typed queries.
 
 ## 4. Data Models (Core Entities)
-- **User**: Family member accounts.
-- **Ledger**: The shared container for the family's books.
+- **User**: Family member accounts. Includes Role-Based Access Control (`admin` vs `member`).
+- **Ledger**: The shared container for the family's books. Includes invitation/approval workflows for new members to join securely.
 - **Category**: Defined as `INCOME` or `EXPENSE`. Shared strictly across the ledger to prevent fragmentation.
 - **Account**: Real-world asset representations (e.g., "Husband's Alipay", "Joint Bank Card").
-- **Transaction**: The atomic record linking an Amount (Decimal precise), User, Category, Account, Ledger, and Timestamp.
+- **Transaction**: The atomic record. Required fields:
+  - Amount (Decimal precise)
+  - User, Category, Account, Ledger references
+  - Timestamp (Stored as UTC `timestamptz`, retrieved using local timezone `Asia/Shanghai`)
+  - Notes / Description (User comments)
+  - External_ID (To deduplicate AliPay/WeChat IDs)
+  - Audit fields (`created_at`, `updated_at`, `deleted_at`)
 
 ## 5. System Boundaries & Operations
 ### Authentication & Scope
