@@ -9,7 +9,7 @@ async function main() {
   const accountId = 'default-account';
 
   // Default dev password — change this before any real deployment
-  const DEFAULT_PASSWORD = 'admin123';
+  const DEFAULT_PASSWORD = 'Fam!lyLedger#9X';
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
 
   console.log('Seeding Database...');

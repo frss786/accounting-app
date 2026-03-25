@@ -99,7 +99,7 @@ export default function Login() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          Dev account: <span className="font-mono">admin@dev.local</span> / <span className="font-mono">admin123</span>
+          Dev account: <span className="font-mono">admin@dev.local</span> / <span className="font-mono">Fam!lyLedger#9X</span>
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -45,12 +45,14 @@ export default function Dashboard() {
   const ledgerId = user?.ledgerId ?? 'default-ledger';
   const [timeRange, setTimeRange] = useState('1 Month');
   const [loading, setLoading] = useState(true);
-  const [monthlyTrendData, setMonthlyTrendData] = useState<{name: string, income: number, expense: number}[]>([]);
-  const [categoryData, setCategoryData] = useState<{name: string, value: number}[]>([]);
-  const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 });
+
+  // Raw data fetched once
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [catsById, setCatsById] = useState<Record<string, string>>({});
 
   const timeRanges = ['1 Month', '3 Months', '6 Months', '1 Year'];
 
+  // Fetch all data once
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -59,78 +61,15 @@ export default function Dashboard() {
           api.get(`/api/ledgers/${ledgerId}/transactions`),
           api.get(`/api/ledgers/${ledgerId}/categories`)
         ]);
-        
-        let txs: Transaction[] = [];
-        let cats: Category[] = [];
 
-        txs = txRes.data || [];
-        cats = catRes.data || [];
+        const txs: Transaction[] = txRes.data || [];
+        const cats: Category[] = catRes.data || [];
 
-        // Map categories by id for quick lookup
-        const catsById: Record<string, string> = {};
-        cats.forEach(c => { catsById[c.id] = c.name; });
+        const map: Record<string, string> = {};
+        cats.forEach(c => { map[c.id] = c.name; });
 
-        let totalIncome = 0;
-        let totalExpense = 0;
-
-        // Group by Month/Year chronological
-        // We'll map the timestamp to "MMM YYYY" for sorting and "MMM" for display, to handle cross-year properly
-        const monthlyMap = new Map<string, {name: string, income: number, expense: number, dateValue: number}>();
-        
-        const catMap = new Map<string, number>();
-
-        txs.forEach(tx => {
-          if (!tx.timestamp) return;
-          const d = new Date(tx.timestamp);
-          if (isNaN(d.getTime())) return;
-
-          // Prisma Decimal comes over the wire as a string — coerce to number
-          const amount = Number(tx.amount);
-          if (isNaN(amount)) return;
-
-          const monthName = d.toLocaleString('default', { month: 'short' });
-          const year = d.getFullYear(); // to make key unique per year-month
-          const monthKey = `${monthName} ${year}`;
-          const dateValue = new Date(year, d.getMonth(), 1).getTime();
-
-          if (!monthlyMap.has(monthKey)) {
-            monthlyMap.set(monthKey, { name: monthName, income: 0, expense: 0, dateValue });
-          }
-          const monthData = monthlyMap.get(monthKey)!;
-
-          if (tx.type === 'INCOME') {
-            monthData.income += amount;
-            totalIncome += amount;
-          } else if (tx.type === 'EXPENSE') {
-            monthData.expense += amount;
-            totalExpense += amount;
-            
-            // Category aggregation
-            const cName = tx.categoryId && catsById[tx.categoryId] ? catsById[tx.categoryId] : 'Uncategorized';
-            catMap.set(cName, (catMap.get(cName) || 0) + amount);
-          }
-        });
-
-        // Set totals
-        setTotals({
-          income: totalIncome,
-          expense: totalExpense,
-          balance: totalIncome - totalExpense
-        });
-
-        const sortedMonths = Array.from(monthlyMap.values())
-          .sort((a, b) => a.dateValue - b.dateValue)
-          .map(({ name, income, expense }) => ({ name, income, expense }));
-        
-        setMonthlyTrendData(sortedMonths);
-
-        const catDataArray = Array.from(catMap.entries())
-          .filter(([_, value]) => value > 0)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value);
-
-        setCategoryData(catDataArray);
-
+        setAllTransactions(txs);
+        setCatsById(map);
       } catch (err) {
         console.error("Error fetching dashboard data", err);
       } finally {
@@ -139,7 +78,77 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [ledgerId]);
+
+  // Derive cutoff date from selected time range
+  const cutoff = useMemo(() => {
+    const now = new Date();
+    const monthsMap: Record<string, number> = {
+      '1 Month': 1,
+      '3 Months': 3,
+      '6 Months': 6,
+      '1 Year': 12,
+    };
+    const months = monthsMap[timeRange] ?? 1;
+    return new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  }, [timeRange]);
+
+  // Re-derive charts and totals whenever raw data or timeRange changes
+  const { monthlyTrendData, categoryData, totals } = useMemo(() => {
+    const filtered = allTransactions.filter(tx => {
+      if (!tx.timestamp) return false;
+      return new Date(tx.timestamp) >= cutoff;
+    });
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    const monthlyMap = new Map<string, { name: string; income: number; expense: number; dateValue: number }>();
+    const catMap = new Map<string, number>();
+
+    filtered.forEach(tx => {
+      const d = new Date(tx.timestamp);
+      if (isNaN(d.getTime())) return;
+
+      const amount = Number(tx.amount);
+      if (isNaN(amount)) return;
+
+      const monthName = d.toLocaleString('default', { month: 'short' });
+      const year = d.getFullYear();
+      const monthKey = `${monthName} ${year}`;
+      const dateValue = new Date(year, d.getMonth(), 1).getTime();
+
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, { name: monthName, income: 0, expense: 0, dateValue });
+      }
+      const monthData = monthlyMap.get(monthKey)!;
+
+      if (tx.type === 'INCOME') {
+        monthData.income += amount;
+        totalIncome += amount;
+      } else if (tx.type === 'EXPENSE') {
+        monthData.expense += amount;
+        totalExpense += amount;
+        const cName = tx.categoryId && catsById[tx.categoryId] ? catsById[tx.categoryId] : 'Uncategorized';
+        catMap.set(cName, (catMap.get(cName) || 0) + amount);
+      }
+    });
+
+    const monthlyTrendData = Array.from(monthlyMap.values())
+      .sort((a, b) => a.dateValue - b.dateValue)
+      .map(({ name, income, expense }) => ({ name, income, expense }));
+
+    const categoryData = Array.from(catMap.entries())
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    return {
+      monthlyTrendData,
+      categoryData,
+      totals: { income: totalIncome, expense: totalExpense, balance: totalIncome - totalExpense },
+    };
+  }, [allTransactions, cutoff, catsById]);
 
   if (loading) {
     return (
