@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User role enumeration
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+// Transaction type enumeration
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+// User model
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  ledgers      LedgerMember[]
+  transactions Transaction[]
+  accounts     Account[]
+
+  @@map("users")
+}
+
+// Ledger model (shared container)
+model Ledger {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  members      LedgerMember[]
+  categories   Category[]
+  accounts     Account[]
+  transactions Transaction[]
+
+  @@map("ledgers")
+}
+
+// LedgerMember join table for User-Ledger relationship
+model LedgerMember {
+  id       String @id @default(cuid())
+  userId   String
+  ledgerId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger Ledger @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ledgerId])
+  @@map("ledger_members")
+}
+
+// Category model
+model Category {
+  id       String @id @default(cuid())
+  name     String
+  type     TransactionType
+  ledgerId String
+
+  ledger       Ledger        @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([ledgerId])
+  @@map("categories")
+}
+
+// Account model
+model Account {
+  id       String @id @default(cuid())
+  name     String
+  type     String // e.g., "CHECKING", "SAVINGS", "CREDIT_CARD"
+  userId   String
+  ledgerId String
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger       Ledger        @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([ledgerId])
+  @@map("accounts")
+}
+
+// Transaction model
+model Transaction {
+  id          String  @id @default(cuid())
+  externalId  String? @unique
+  amount      Decimal @db.Decimal(12, 2)
+  type        TransactionType
+  notes       String?
+  timestamp   DateTime @db.Timestamptz(6) @default(now())
+  
+  userId      String
+  categoryId  String
+  accountId   String
+  ledgerId    String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  ledger   Ledger   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([ledgerId])
+  @@index([userId])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([timestamp])
+  @@map("transactions")
+}
