@@ -1,28 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, CartesianGrid, Legend
 } from 'recharts';
 
-const MONTHLY_TREND_DATA = [
-  { name: 'Oct', income: 4000, expense: 2400 },
-  { name: 'Nov', income: 5200, expense: 3398 },
-  { name: 'Dec', income: 4800, expense: 3800 },
-  { name: 'Jan', income: 5500, expense: 4208 },
-  { name: 'Feb', income: 5890, expense: 3800 },
-  { name: 'Mar', income: 6390, expense: 4300 },
-];
+interface Transaction {
+  id: string;
+  amount: number;
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  timestamp: string;
+  categoryId?: string;
+}
 
-const CATEGORY_DATA = [
-  { name: 'Dining', value: 500 },
-  { name: 'Transport', value: 300 },
-  { name: 'Groceries', value: 800 },
-  { name: 'Utilities', value: 250 },
-  { name: 'Entertainment', value: 150 },
-];
+interface Category {
+  id: string;
+  name: string;
+}
 
-const COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b'];
+const COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b', '#0ea5e9', '#6366f1', '#ec4899', '#f97316', '#14b8a6'];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -43,8 +39,107 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Dashboard() {
-  const [timeRange, setTimeRange] = React.useState('1 Month');
+  const [timeRange, setTimeRange] = useState('1 Month');
+  const [loading, setLoading] = useState(true);
+  const [monthlyTrendData, setMonthlyTrendData] = useState<{name: string, income: number, expense: number}[]>([]);
+  const [categoryData, setCategoryData] = useState<{name: string, value: number}[]>([]);
+  const [totals, setTotals] = useState({ income: 0, expense: 0, balance: 0 });
+
   const timeRanges = ['1 Month', '3 Months', '6 Months', '1 Year'];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [txRes, catRes] = await Promise.all([
+          fetch('/api/ledgers/default-ledger/transactions'),
+          fetch('/api/ledgers/default-ledger/categories')
+        ]);
+        
+        let txs: Transaction[] = [];
+        let cats: Category[] = [];
+
+        if (txRes.ok) txs = await txRes.json();
+        if (catRes.ok) cats = await catRes.json();
+
+        // Map categories by id for quick lookup
+        const catsById: Record<string, string> = {};
+        cats.forEach(c => { catsById[c.id] = c.name; });
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        // Group by Month/Year chronological
+        // We'll map the timestamp to "MMM YYYY" for sorting and "MMM" for display, to handle cross-year properly
+        const monthlyMap = new Map<string, {name: string, income: number, expense: number, dateValue: number}>();
+        
+        const catMap = new Map<string, number>();
+
+        txs.forEach(tx => {
+          if (!tx.timestamp) return;
+          const d = new Date(tx.timestamp);
+          if (isNaN(d.getTime())) return;
+
+          const monthName = d.toLocaleString('default', { month: 'short' });
+          const year = d.getFullYear(); // to make key unique per year-month
+          const monthKey = `${monthName} ${year}`;
+          const dateValue = new Date(year, d.getMonth(), 1).getTime();
+
+          if (!monthlyMap.has(monthKey)) {
+            monthlyMap.set(monthKey, { name: monthName, income: 0, expense: 0, dateValue });
+          }
+          const monthData = monthlyMap.get(monthKey)!;
+
+          if (tx.type === 'INCOME') {
+            monthData.income += tx.amount;
+            totalIncome += tx.amount;
+          } else if (tx.type === 'EXPENSE') {
+            monthData.expense += tx.amount;
+            totalExpense += tx.amount;
+            
+            // Category aggregation
+            let cName = tx.categoryId && catsById[tx.categoryId] ? catsById[tx.categoryId] : 'Uncategorized';
+            catMap.set(cName, (catMap.get(cName) || 0) + tx.amount);
+          }
+        });
+
+        // Set totals
+        setTotals({
+          income: totalIncome,
+          expense: totalExpense,
+          balance: totalIncome - totalExpense
+        });
+
+        const sortedMonths = Array.from(monthlyMap.values())
+          .sort((a, b) => a.dateValue - b.dateValue)
+          .map(({ name, income, expense }) => ({ name, income, expense }));
+        
+        setMonthlyTrendData(sortedMonths);
+
+        const catDataArray = Array.from(catMap.entries())
+          .filter(([_, value]) => value > 0)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+
+        setCategoryData(catDataArray);
+
+      } catch (err) {
+        console.error("Error fetching dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[50vh]">
+        <div className="text-slate-500 font-medium animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -62,11 +157,7 @@ export default function Dashboard() {
               <ArrowUpRight className="w-5 h-5 text-green-600" />
             </div>
           </div>
-          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">$12,450.00</p>
-          <div className="mt-2 flex items-center text-sm">
-            <span className="text-green-600 font-medium">+4.5%</span>
-            <span className="ml-2 text-slate-400">from last month</span>
-          </div>
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">${totals.income.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
 
         {/* Expense Card */}
@@ -77,11 +168,7 @@ export default function Dashboard() {
               <ArrowDownRight className="w-5 h-5 text-red-500" />
             </div>
           </div>
-          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">$8,230.50</p>
-          <div className="mt-2 flex items-center text-sm">
-            <span className="text-red-500 font-medium">+1.2%</span>
-            <span className="ml-2 text-slate-400">from last month</span>
-          </div>
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">${totals.expense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
 
         {/* Balance Card */}
@@ -92,11 +179,7 @@ export default function Dashboard() {
               <Wallet className="w-5 h-5 text-blue-600" />
             </div>
           </div>
-          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">$4,219.50</p>
-          <div className="mt-2 flex items-center text-sm">
-            <span className="text-blue-600 font-medium">+12.5%</span>
-            <span className="ml-2 text-slate-400">from last month</span>
-          </div>
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">${totals.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -127,7 +210,7 @@ export default function Dashboard() {
           </div>
           <div className="p-6 flex-1 min-h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MONTHLY_TREND_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="name" 
@@ -161,7 +244,7 @@ export default function Dashboard() {
               <PieChart>
                 <Tooltip content={<CustomTooltip />} />
                 <Pie
-                  data={CATEGORY_DATA}
+                  data={categoryData}
                   cx="50%"
                   cy="50%"
                   innerRadius={80}
@@ -169,7 +252,7 @@ export default function Dashboard() {
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {CATEGORY_DATA.map((entry, index) => (
+                  {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

@@ -1,27 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
+import axios from 'axios';
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+}
 
 export default function ManualEntry() {
   const [formData, setFormData] = useState({
     type: 'Expense',
     amount: '',
-    categoryId: 'Food',
+    categoryId: '',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
-  const categories = ['Food', 'Transport', 'Salary', 'Groceries', 'Utilities', 'Entertainment'];
+  const [categories, setCategories] = useState<Category[]>([]);
   const types = ['Expense', 'Income', 'Transfer'];
+
+  useEffect(() => {
+    // Fetch real categories from backend on mount
+    axios.get('/api/ledgers/default-ledger/categories')
+      .then(res => setCategories(res.data))
+      .catch(err => console.error('Failed to load categories', err));
+  }, []);
+
+  // Filter categories based on selected transaction type
+  const activeCategories = categories.filter(c => c.type === formData.type.toUpperCase());
+
+  // Auto-select the first valid category when type or category list changes
+  useEffect(() => {
+    if (activeCategories.length > 0 && !activeCategories.find(c => c.id === formData.categoryId)) {
+      setFormData(prev => ({ ...prev, categoryId: activeCategories[0].id }));
+    }
+  }, [formData.type, categories, activeCategories, formData.categoryId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log('Submitting:', formData);
-      // await axios.post('/api/ledgers/default-ledger/transactions', formData);
-      alert('Transaction saved (Mock)');
-      setFormData({ ...formData, amount: '', notes: '' });
+      const payload = {
+        amount: Number(formData.amount),
+        type: formData.type.toUpperCase(),
+        category_id: formData.categoryId,
+        account_id: 'default-account', // Use default account for now
+        timestamp: new Date(formData.date).toISOString(),
+        notes: formData.notes
+      };
+
+      await axios.post('/api/ledgers/default-ledger/transactions', payload);
+      alert('Transaction saved successfully!');
+      
+      // Reset form (keep type and date)
+      setFormData(prev => ({ ...prev, amount: '', notes: '' }));
     } catch (error) {
       console.error(error);
+      alert('Failed to save transaction');
     }
   };
 
@@ -97,9 +132,11 @@ export default function ManualEntry() {
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
               className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none appearance-none"
+              required
             >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+              {activeCategories.length === 0 && <option value="" disabled>No categories available</option>}
+              {activeCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -121,6 +158,7 @@ export default function ManualEntry() {
             <button
               type="submit"
               className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm active:scale-95"
+              disabled={activeCategories.length === 0}
             >
               <Save size={18} />
               Save Transaction
