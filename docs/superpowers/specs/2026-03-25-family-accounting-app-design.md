@@ -35,7 +35,13 @@ A lightweight, family-collaborative accounting web application. The core objecti
 - **Account**: Real-world asset representations (e.g., "Husband's Alipay", "Joint Bank Card").
 - **Transaction**: The atomic record linking an Amount (Decimal precise), User, Category, Account, Ledger, and Timestamp.
 
-## 5. Technical Constraints & Considerations
+## 5. System Boundaries & Operations
+### Authentication & Scope
+- **Auth Framework**: JWT-based session management, issuing opaque tokens tied to a `LedgerID` to ensure data boundaries are strictly enforced. All data queries MUST be scoped by this LedgerID.
+### Error Handling & Validation
+- **CSV Robustness**: The server will reject CSV files over 5MB (Rate/Size Limiting). The parser will catch `MalformedRowErrors` and return a staging array that explicitly marks structurally invalid rows. Timezone parsing will default to `Asia/Shanghai` if unspecified.
+
+## 6. Technical Constraints & Considerations
 - **Precision**: Monetary values MUST be stored as explicit `Decimal` / `Numeric` types in PostgreSQL (e.g., `DECIMAL(12,2)`). Never use floating-point types to prevent accuracy loss.
-- **Idempotency for Imports**: CSV imports must implement deduplication checks (using original transaction IDs from AliPay/WeChat) to prevent double-charging the same transaction if a CSV is uploaded twice.
+- **Idempotency for Imports**: CSV imports must implement deduplication checks (using original transaction IDs from AliPay/WeChat as `external_id` with `UNIQUE` constraints) to prevent double-charging the same transaction if a CSV is uploaded twice.
 - **Security & Scope**: Data isolations must enforce that users can only query transactions tied to their authorized `Ledger`.
