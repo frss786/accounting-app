@@ -5,6 +5,8 @@ import { LayoutDashboard, FileText, UploadCloud, Wallet } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import LedgerFeed from './pages/LedgerFeed';
 import ImportData from './pages/ImportData';
+import ManualEntry from './pages/ManualEntry';
+import { PlusCircle } from 'lucide-react';
 
 function App() {
   return (
@@ -58,6 +60,19 @@ function App() {
               <UploadCloud size={18} />
               Import Data
             </NavLink>
+            <NavLink
+              to="/manual"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                  isActive 
+                  ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100/50' 
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`
+              }
+            >
+              <PlusCircle size={18} />
+              Add Record
+            </NavLink>
           </nav>
         </aside>
 
@@ -68,6 +83,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/ledger" element={<LedgerFeed />} />
               <Route path="/import" element={<ImportData />} />
+              <Route path="/manual" element={<ManualEntry />} />
             </Routes>
           </div>
         </main>

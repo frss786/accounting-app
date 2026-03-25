@@ -43,6 +43,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Dashboard() {
+  const [timeRange, setTimeRange] = React.useState('1 Month');
+  const timeRanges = ['1 Month', '3 Months', '6 Months', '1 Year'];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <header>
@@ -94,6 +97,25 @@ export default function Dashboard() {
             <span className="text-blue-600 font-medium">+12.5%</span>
             <span className="ml-2 text-slate-400">from last month</span>
           </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900">Analytics</h2>
+        <div className="flex bg-slate-100 p-1 rounded-xl">
+          {timeRanges.map((range) => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                timeRange === range
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {range}
+            </button>
+          ))}
         </div>
       </div>
 
